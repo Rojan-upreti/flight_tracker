@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#081522">
+  <meta name="description" content="Live airport radio, captions, and nearby aircraft for KCDW, KEWR, and KJFK.">
+  <title>Airport Radio Tracker</title>
+  <link rel="preconnect" href="https://tile.openstreetmap.org">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-mark">✦</div><div><strong>RADAR / RADIO</strong><span>Airport monitor</span></div></div>
+      <div class="side-section-label">AIRPORTS <span id="airport-total">02</span></div>
+      <div id="airport-list" class="airport-list"></div>
+      <div class="side-bottom"><div id="local-clock-label" class="clock-label">LOCAL TIME · KCDW</div><div id="local-time" class="local-time">--:--:--</div><a id="osm-link" href="https://www.openstreetmap.org/?mlat=40.8752&mlon=-74.2814#map=14/40.8752/-74.2814" target="_blank" rel="noopener noreferrer">View on OpenStreetMap ↗</a></div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar"><div class="breadcrumb">AIRPORTS <span>/</span> UNITED STATES <span>/</span> <b id="breadcrumb-icao">KCDW</b></div><div class="topbar-right"><span class="system-dot"></span> <span id="monitor-label">KCDW MONITOR</span> <span id="utc-time" class="utc-time">--:-- UTC</span></div></header>
+      <div class="workspace">
+        <div class="content-column">
+          <section class="airport-heading"><div class="eyebrow"><span class="eyebrow-line"></span> LIVE AIRPORT VIEW</div><div class="heading-row"><div><h1 id="airport-title">Essex County <span>Airport</span></h1><p id="airport-description">Caldwell, New Jersey <span class="separator">·</span> ICAO KCDW</p></div><div id="heading-coordinates" class="heading-coordinates">40.8752° N<br>74.2814° W</div></div></section>
+          <section id="map-card" class="map-card" aria-label="Map of KCDW and nearby aircraft"><div id="map"></div><div id="map-fallback" class="map-fallback" hidden>Map could not load. Check your internet connection.</div><div class="map-chip"><span class="pulse"></span> REGIONAL AIRCRAFT <span id="aircraft-count">—</span></div><div class="map-chip tower-chip"><span class="pulse"></span> POSSIBLE TOWER TRAFFIC <span id="tower-count">—</span></div><div id="flight-focus" class="flight-focus" role="status" aria-live="polite" hidden><span>CALLED AIRCRAFT</span><strong id="flight-focus-callsign"></strong><small id="flight-focus-detail"></small></div><button id="recenter" class="recenter" type="button" title="Center on KCDW" aria-label="Center map on KCDW">⌖</button><div id="map-data-source" class="map-attribution-note">AIRCRAFT DATA: ADSB.FI + OPENSKY</div></section>
+          <section class="sync-strip" aria-label="Live radio and caption"><div class="sync-strip-top"><span><span class="pulse"></span> LIVE RADIO · AUDIO + CAPTION</span><span id="sync-state">READY</span></div><div class="sync-strip-main"><button id="sync-play" type="button" aria-label="Play synchronized radio">▶</button><div class="sync-copy"><small id="sync-channel">KCDW ATIS</small><p id="live-line" class="live-line">Press play for continuous live radio and captions.</p></div></div><div class="sync-strip-foot">Continuous 5 second chunks · Audio never skipped · Captions attach as ready</div></section>
+          <div class="below-map"><div class="metric"><span>AIRPORT</span><strong id="airport-icao">KCDW</strong></div><div class="metric"><span>REGIONAL AIRCRAFT</span><strong id="aircraft-metric">—</strong></div><div class="metric"><span>POSITION UPDATE</span><strong id="aircraft-updated">Waiting…</strong></div><div class="source-links"><a href="https://adsb.fi/" target="_blank" rel="noopener noreferrer">adsb.fi ↗</a><a href="https://map.opensky-network.org/" target="_blank" rel="noopener noreferrer">OpenSky ↗</a></div></div>
+        </div>
+
+        <aside class="radio-panel" aria-label="Radio player and captions">
+          <div class="panel-top"><span>LIVE RADIO</span><span id="radio-airport-id" class="panel-id">KCDW / NJ</span></div>
+          <div class="radio-head"><div class="radio-icon">◖))</div><div><div class="on-air"><span class="pulse"></span> AVAILABLE CHANNEL</div><h2 id="channel-title">KCDW ATIS</h2><p id="channel-subtitle">Automatic Terminal Information Service</p></div></div>
+          <div class="frequency-block"><div class="block-label">FREQUENCIES <span>MHZ</span></div><div id="frequency-list"></div><p id="frequency-note" class="frequency-note" hidden></p></div>
+          <div class="player-card"><div class="player-top"><span>MONITOR FEED</span><span id="player-status">READY</span></div><canvas id="waveform" height="72" aria-label="Audio waveform"></canvas><div class="player-controls"><button id="play-button" class="play-button" type="button" aria-label="Play radio">▶</button><div class="player-description"><strong id="player-channel">KCDW ATIS</strong><small id="player-hint">Press play to listen</small></div><button id="mute-button" class="mute-button" type="button" aria-label="Mute audio" title="Mute audio">◖))</button></div><div class="volume-row"><span>VOL</span><input id="volume" type="range" min="0" max="100" value="70" aria-label="Volume"><span id="volume-value">70%</span></div><audio id="audio" preload="none"></audio></div>
+          <div id="error-message" class="error-message" role="alert" hidden></div>
+          <div class="transcript-head"><div><span class="eyebrow-small">LIVE TRANSCRIPT</span><h3>Radio captions</h3></div><div class="caption-actions"><button id="caption-toggle" class="caption-toggle" type="button" aria-pressed="false">Start captions</button><span id="caption-status" class="caption-badge">STANDBY</span></div></div>
+          <div id="transcript" class="transcript" aria-live="polite"><div class="empty-transcript"><span class="caption-glyph">≋</span><strong>Awaiting transmission</strong><p>Start captions to follow this channel. A matched callsign will focus its aircraft on the map.</p></div></div>
+          <div class="panel-footer"><span>Audio source: <a id="source-link" href="https://www.liveatc.net/" target="_blank" rel="noopener noreferrer">LiveATC.net ↗</a></span><span>Captions may contain errors</span></div>
+        </aside>
+      </div>
+    </main>
+  </div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
