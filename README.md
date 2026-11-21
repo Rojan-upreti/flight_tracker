@@ -38,3 +38,13 @@ Check the source provider's terms and obtain any required permission before dist
 - `GET /api/segments/:session/:sequence` — the exact WAV chunk for one event
 
 Channel IDs: `atis`, `radio-1`, `radio-2`, `ewr-tower`, `jfk-main-tower`.
+
+## Live radio events
+
+Each `/api/radio/:channel` session emits:
+
+- `segment` — audio chunk metadata (`sequence`, `audioUrl`, `durationMs`) as soon as PCM is ready
+- `caption` — DeepSeek text for that `sequence` when transcription finishes
+- `status` / `warning` / `error` — buffering, caption lag, and stream failures
+
+The browser prefetches WAV segments for continuous playback and attaches captions by sequence even if they arrive late.
