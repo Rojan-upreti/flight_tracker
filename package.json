@@ -1,7 +1,8 @@
 {
-  "name": "kcdw-radio-tracker",
+  "name": "airport-radio-tracker",
   "version": "1.0.0",
   "private": true,
+  "description": "Live airport radio, captions, and nearby aircraft for KCDW, KEWR, and KJFK.",
   "type": "module",
   "scripts": {
     "start": "node backend/server.js",
