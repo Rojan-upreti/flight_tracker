@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeAdsb, normalizeOpenSky, mergeAircraft, nearbyAircraft } from './aircraft.js';
+import { normalizeAdsb, normalizeOpenSky, mergeAircraft, nearbyAircraft, regionForAirport } from './aircraft.js';
 
 test('merges two live feeds by aircraft ID and keeps a fresh unique OpenSky plane', () => {
   const now = 1_000_000;
@@ -33,9 +33,15 @@ test('both airport views share one regional request per source', async () => {
     return { ok: true, json: async () => ({ time: Math.floor(now / 1000), states: [['def456', 'DAL403', 'United States', Math.floor(now / 1000), Math.floor(now / 1000), -73.72, 40.71, 500, false, 80, 180]] }) };
   };
   try {
-    await nearbyAircraft();
-    await nearbyAircraft();
+    await nearbyAircraft('KJFK');
+    await nearbyAircraft('KEWR');
     assert.equal(calls.filter(url => url.includes('adsb.fi')).length, 1);
     assert.equal(calls.filter(url => url.includes('opensky-network.org')).length, 1);
   } finally { globalThis.fetch = original; }
+});
+
+test('KLAX uses a separate Los Angeles region from New York airports', () => {
+  assert.equal(regionForAirport('KJFK').key, 'ny-metro');
+  assert.equal(regionForAirport('KLAX').key, 'la-basin');
+  assert.equal(regionForAirport('KLAX').lat, 33.9425);
 });

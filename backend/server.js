@@ -19,9 +19,9 @@ function json(res, status, body) {
 
 function sse(res, type, data) { res.write(`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`); }
 
-async function aircraft(res) {
+async function aircraft(res, icao) {
   try {
-    json(res, 200, await nearbyAircraft());
+    json(res, 200, await nearbyAircraft(icao));
   } catch (error) {
     json(res, 503, { error: `Aircraft positions unavailable: ${error.message}` });
   }
@@ -68,7 +68,10 @@ async function synchronizedRadio(res, channel) {
             if (!stopped && caption) sse(res, 'caption', { channel: channel.id, sequence: job.id, text: caption, time: Date.now() });
           }
         } catch (error) {
-          if (!stopped) sse(res, 'warning', { message: `Caption unavailable for this segment: ${error.message}` });
+          if (!stopped && error?.name !== 'AbortError') {
+            console.warn(`caption segment ${job.id}: ${error.message}`);
+            sse(res, 'warning', { message: `Caption unavailable for this segment: ${error.message}` });
+          }
         } finally {
           asrActive--;
           captionStatus();
@@ -80,7 +83,8 @@ async function synchronizedRadio(res, channel) {
 
   function emitSegment(pcm) {
     const id = ++sequence;
-    session.segments.set(id, wavFromPcm(pcm));
+    const owned = Buffer.from(pcm);
+    session.segments.set(id, wavFromPcm(owned));
     trimSegmentMap(session.segments);
     sse(res, 'segment', {
       channel: channel.id,
@@ -91,7 +95,7 @@ async function synchronizedRadio(res, channel) {
       audioUrl: `/api/segments/${sessionId}/${id}`,
     });
     if (id === 1) sse(res, 'status', { message: 'Streaming live radio…', processing: false });
-    asrQueue.push({ id, pcm });
+    asrQueue.push({ id, pcm: owned });
     kickAsr();
   }
 
@@ -126,7 +130,7 @@ export const server = http.createServer(async (req, res) => {
   if (pathname === '/api/config') return json(res, 200, { airport: AIRPORT, airports: AIRPORTS, channels: CHANNELS.map(({ env, mount, ...publicChannel }) => publicChannel), captionsConfigured: Boolean(process.env.DEEPSEEK_API_KEY) });
   if (pathname === '/api/aircraft') {
     const selected = airportByIcao((requestUrl.searchParams.get('icao') || AIRPORT.icao).toUpperCase());
-    return selected ? aircraft(res) : json(res, 404, { error: 'Unknown airport' });
+    return selected ? aircraft(res, selected.icao) : json(res, 404, { error: 'Unknown airport' });
   }
   const segmentMatch = pathname.match(/^\/api\/segments\/([\w-]+)\/(\d+)$/);
   if (segmentMatch) {

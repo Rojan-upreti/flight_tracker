@@ -1,8 +1,30 @@
 const ADSB_REFRESH_MS = 5_000;
 const OPENSKY_REFRESH_MS = 30_000;
 const MAX_POSITION_AGE_MS = 50_000;
-const REGION = { key: 'ny-metro', lat: 40.76, lon: -74.03, radiusNm: 100, bounds: { lamin: 39.55, lomin: -75.7, lamax: 41.95, lomax: -72.35 } };
+const REGIONS = {
+  'ny-metro': {
+    key: 'ny-metro',
+    airports: new Set(['KCDW', 'KEWR', 'KJFK']),
+    lat: 40.76,
+    lon: -74.03,
+    radiusNm: 100,
+    bounds: { lamin: 39.55, lomin: -75.7, lamax: 41.95, lomax: -72.35 },
+  },
+  'la-basin': {
+    key: 'la-basin',
+    airports: new Set(['KLAX']),
+    lat: 33.9425,
+    lon: -118.408,
+    radiusNm: 100,
+    bounds: { lamin: 32.7, lomin: -119.7, lamax: 35.2, lomax: -117.0 },
+  },
+};
 const caches = { adsb: new Map(), opensky: new Map() };
+
+export function regionForAirport(icao = 'KCDW') {
+  const code = String(icao || 'KCDW').toUpperCase();
+  return Object.values(REGIONS).find(region => region.airports.has(code)) || REGIONS['ny-metro'];
+}
 
 function cached(cache, key, refreshMs, load) {
   const entry = cache.get(key);
@@ -72,15 +94,15 @@ export function mergeAircraft(adsb, opensky, now = Date.now()) {
   };
 }
 
-async function loadAdsb() {
-  const url = `https://opendata.adsb.fi/api/v3/lat/${REGION.lat}/lon/${REGION.lon}/dist/${REGION.radiusNm}`;
+async function loadAdsb(region) {
+  const url = `https://opendata.adsb.fi/api/v3/lat/${region.lat}/lon/${region.lon}/dist/${region.radiusNm}`;
   const response = await fetch(url, { signal: AbortSignal.timeout(9_000) });
   if (!response.ok) throw new Error(`adsb.fi returned HTTP ${response.status}`);
   return normalizeAdsb(await response.json());
 }
 
-async function loadOpenSky() {
-  const url = `https://opensky-network.org/api/states/all?${new URLSearchParams(REGION.bounds)}`;
+async function loadOpenSky(region) {
+  const url = `https://opensky-network.org/api/states/all?${new URLSearchParams(region.bounds)}`;
   const response = await fetch(url, { signal: AbortSignal.timeout(9_000) });
   if (!response.ok) {
     const error = new Error(`OpenSky returned HTTP ${response.status}`);
@@ -90,11 +112,12 @@ async function loadOpenSky() {
   return normalizeOpenSky(await response.json());
 }
 
-export async function nearbyAircraft() {
-  const openSkyPromise = cached(caches.opensky, REGION.key, OPENSKY_REFRESH_MS, loadOpenSky);
-  const adsbPromise = cached(caches.adsb, REGION.key, ADSB_REFRESH_MS, loadAdsb);
+export async function nearbyAircraft(icao = 'KCDW') {
+  const region = regionForAirport(icao);
+  const openSkyPromise = cached(caches.opensky, region.key, OPENSKY_REFRESH_MS, () => loadOpenSky(region));
+  const adsbPromise = cached(caches.adsb, region.key, ADSB_REFRESH_MS, () => loadAdsb(region));
   const adsb = await adsbPromise;
-  const opensky = caches.opensky.get(REGION.key)?.data || (adsb ? null : await openSkyPromise);
+  const opensky = caches.opensky.get(region.key)?.data || (adsb ? null : await openSkyPromise);
   if (!adsb && !opensky) throw new Error('Both aircraft feeds are unavailable');
   return mergeAircraft(adsb, opensky);
 }

@@ -5,6 +5,7 @@ const POSITION_MS = 50_000;
 const RULES = {
   KJFK: { surfaceNm: 4.2, closeNm: 5, approachNm: 18, departureNm: 10, fallbackNm: 25, monitorGroundNm: 15, maxAltitudeFt: 8500 },
   KEWR: { surfaceNm: 4.0, closeNm: 5, approachNm: 18, departureNm: 10, fallbackNm: 25, monitorGroundNm: 15, maxAltitudeFt: 8500 },
+  KLAX: { surfaceNm: 4.5, closeNm: 6, approachNm: 30, departureNm: 12, fallbackNm: 35, monitorGroundNm: 15, maxAltitudeFt: 10000 },
   KCDW: { surfaceNm: 2.5, closeNm: 3, approachNm: 10, departureNm: 6, fallbackNm: 15, maxAltitudeFt: 4500 },
 };
 

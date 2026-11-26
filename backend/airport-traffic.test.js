@@ -4,6 +4,7 @@ import { updateAirportTraffic, matchAirportCall } from '../frontend/airport-traf
 
 const jfk = { icao: 'KJFK', lat: 40.639928, lon: -73.778692 };
 const ewr = { icao: 'KEWR', lat: 40.6925, lon: -74.1687 };
+const lax = { icao: 'KLAX', lat: 33.9425, lon: -118.408 };
 const cdw = { icao: 'KCDW', lat: 40.8752, lon: -74.2814 };
 const now = 1_000_000;
 
@@ -58,6 +59,16 @@ test('ambiguous opening short still matches a later full airline callsign', () =
   const match = matchAirportCall('166, turn left. American one sixty six, cleared to land', jfk, traffic.candidates, [local, competing], { now });
   assert.equal(match?.aircraft.icao24, 'a1');
   assert.equal(match?.confidence, 'high');
+});
+
+test('KLAX final approach traffic includes longer-range arrivals', () => {
+  const local = plane('l1', 'AAL100', lax.lat, lax.lon, { onGround: true, altitudeM: null });
+  const arrival = plane('l2', 'UAL200', 34.15, -118.20);
+  const far = plane('l3', 'DAL300', 40.64, -73.78);
+  const result = updateAirportTraffic(lax, [local, arrival, far], new Map(), now);
+  assert.deepEqual(result.candidates.map(item => item.callsign).sort(), ['AAL100', 'UAL200']);
+  assert.equal(result.candidates.find(item => item.callsign === 'UAL200').phase, 'approach');
+  assert.equal(matchAirportCall('United 200, contact tower', lax, result.candidates, [local, arrival, far], { now })?.aircraft.icao24, 'l2');
 });
 
 test('opening address wins over a later traffic callsign for zoom confidence', () => {

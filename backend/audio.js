@@ -61,13 +61,60 @@ export function hasSpeech(pcm) {
   return total / (pcm.length / 64) > 120;
 }
 
+function fetchErrorMessage(error) {
+  const cause = error?.cause;
+  const detail = cause?.code || cause?.message || error?.message || 'unknown error';
+  return detail === 'fetch failed' && cause?.message ? cause.message : detail;
+}
+
+function isRetryableCaptionError(error, status) {
+  if (status === 429 || status === 503 || status === 504) return true;
+  if (error?.name === 'TimeoutError' || error?.name === 'AbortError') return false;
+  const code = error?.cause?.code || error?.code || '';
+  return code === 'ECONNRESET' || code === 'ETIMEDOUT' || code === 'EAI_AGAIN' || code === 'UND_ERR_CONNECT_TIMEOUT'
+    || code === 'UND_ERR_HEADERS_TIMEOUT' || code === 'UND_ERR_BODY_TIMEOUT'
+    || /fetch failed|network|socket|tls/i.test(String(error?.message || ''));
+}
+
 export async function transcribe(pcm, signal) {
-  const form = new FormData();
-  form.append('file', new Blob([wavFromPcm(pcm)], { type: 'audio/wav' }), 'kcdw.wav');
-  const response = await fetch('https://api.deepseek.com/v1/tools/asr', {
-    method: 'POST', headers: { Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}` }, body: form, signal,
-  });
-  if (!response.ok) throw new Error(`DeepSeek captions returned HTTP ${response.status}`);
-  const data = await response.json();
-  return typeof data.text === 'string' ? data.text.trim() : '';
+  const wav = wavFromPcm(pcm);
+  const key = process.env.DEEPSEEK_API_KEY;
+  if (!key) throw new Error('DEEPSEEK_API_KEY is not configured');
+  let lastError;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    if (signal?.aborted) throw Object.assign(new Error('Caption request aborted'), { name: 'AbortError' });
+    try {
+      const form = new FormData();
+      form.append('file', new File([wav], 'radio.wav', { type: 'audio/wav' }));
+      const timeout = AbortSignal.timeout(45_000);
+      const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
+      const response = await fetch('https://api.deepseek.com/v1/tools/asr', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${key}` },
+        body: form,
+        signal: combined,
+      });
+      if (!response.ok) {
+        const body = await response.text().catch(() => '');
+        const error = new Error(`DeepSeek captions returned HTTP ${response.status}${body ? `: ${body.slice(0, 160)}` : ''}`);
+        if (attempt < 3 && isRetryableCaptionError(error, response.status)) {
+          await new Promise(resolve => setTimeout(resolve, attempt * 400));
+          lastError = error;
+          continue;
+        }
+        throw error;
+      }
+      const data = await response.json();
+      return typeof data.text === 'string' ? data.text.trim() : '';
+    } catch (error) {
+      lastError = error;
+      if (signal?.aborted || error?.name === 'AbortError') throw Object.assign(new Error('Caption request aborted'), { name: 'AbortError' });
+      if (attempt < 3 && isRetryableCaptionError(error)) {
+        await new Promise(resolve => setTimeout(resolve, attempt * 400));
+        continue;
+      }
+      throw new Error(`DeepSeek caption request failed (${fetchErrorMessage(error)})`);
+    }
+  }
+  throw lastError || new Error('DeepSeek caption request failed');
 }

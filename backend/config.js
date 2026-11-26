@@ -2,6 +2,7 @@ export const AIRPORTS = [
   { icao: 'KCDW', code: 'CDW', name: 'Essex County Airport', shortName: 'Essex County', city: 'Caldwell, New Jersey', region: 'NJ', lat: 40.8752, lon: -74.2814, zoom: 12 },
   { icao: 'KEWR', code: 'EWR', name: 'Newark Liberty International Airport', shortName: 'Newark Liberty', city: 'Newark, New Jersey', region: 'NJ', lat: 40.6925, lon: -74.1687, zoom: 11 },
   { icao: 'KJFK', code: 'JFK', name: 'John F. Kennedy International Airport', shortName: 'John F. Kennedy', city: 'Queens, New York', region: 'NY', lat: 40.639928, lon: -73.778692, zoom: 11 },
+  { icao: 'KLAX', code: 'LAX', name: 'Los Angeles International Airport', shortName: 'Los Angeles', city: 'Los Angeles, California', region: 'CA', lat: 33.9425, lon: -118.408, zoom: 11 },
 ];
 
 export const AIRPORT = AIRPORTS[0];
@@ -13,6 +14,8 @@ export const CHANNELS = [
   { id: 'radio-2', airportIcao: 'KCDW', name: 'KCDW Del/Gnd/Twr #2', shortName: 'Radio #2', description: 'Clearance · Ground · Tower', mount: 'kcdw2_del_gnd_twr', env: 'KCDW_RADIO_2_STREAM_URL', frequencies: [{ facility: 'Caldwell Clearance', mhz: '121.100' }, { facility: 'Caldwell Ground', mhz: '121.900' }, { facility: 'Caldwell Tower', mhz: '119.800' }] },
   { id: 'ewr-tower', airportIcao: 'KEWR', name: 'KEWR Tower', shortName: 'Tower', description: 'Newark Tower feed', mount: 'kewr_twr', env: 'KEWR_TOWER_STREAM_URL', frequencies: [{ facility: 'Newark Tower', mhz: '118.300' }] },
   { id: 'jfk-main-tower', airportIcao: 'KJFK', name: 'KJFK Main Tower', shortName: 'Main Tower', description: 'Kennedy Ground / Tower feed', mount: 'kjfk9_s', env: 'KJFK_MAIN_TOWER_STREAM_URL', frequencies: [{ facility: 'Kennedy Tower · 4R/22L', mhz: '119.100' }, { facility: 'Kennedy Tower · 4L/22R', mhz: '123.900' }] },
+  { id: 'lax-final-app', airportIcao: 'KLAX', name: 'KLAX Final App', shortName: 'Final App', description: 'SOCAL Approach · Stadium/North Final', mount: 'klax6', env: 'KLAX_FINAL_APP_STREAM_URL', frequencies: [{ facility: 'SOCAL Approach · Stadium/North Final', mhz: '128.500' }] },
+  { id: 'lax-dep-west-app', airportIcao: 'KLAX', name: 'KLAX Dep/West App', shortName: 'Dep/West App', description: 'SOCAL Departure · West Approach', mount: 'klax7', env: 'KLAX_DEP_WEST_APP_STREAM_URL', frequencies: [{ facility: 'SOCAL Approach · Zuma Sector', mhz: '124.500' }, { facility: 'SOCAL Departure · SW→NE', mhz: '124.300' }, { facility: 'SOCAL Departure · W→N', mhz: '125.200' }] },
 ].map(channel => ({ ...channel, sourcePage: `https://www.liveatc.net/hlisten.php?mount=${channel.mount}&icao=${channel.airportIcao.toLowerCase()}` }));
 
 export function channelById(id) { return CHANNELS.find(channel => channel.id === id); }

@@ -1,6 +1,6 @@
 # Airport Radio Tracker
 
-A local monitor for KCDW, KEWR, and KJFK with an OpenStreetMap map, nearby aircraft from adsb.fi and OpenSky, processed radio audio, and live captions. KCDW has ATIS and two clearance/ground/tower feeds; KEWR has Tower; KJFK has a combined Ground/Tower feed.
+A local monitor for KCDW, KEWR, KJFK, and KLAX with an OpenStreetMap map, nearby aircraft from adsb.fi and OpenSky, processed radio audio, and live captions. KCDW has ATIS and two clearance/ground/tower feeds; KEWR has Tower; KJFK has a combined Ground/Tower feed; KLAX has Final App and Dep/West App.
 
 ## Run
 
@@ -20,11 +20,11 @@ The map marks **possible tower traffic** for the selected airport using fresh po
 
 When a caption names a nearby aircraft, the map highlights its marker, opens its callsign popup, and zooms in on that aircraft. The highlight lasts for that audio chunk, clears when it finishes, and switches to a new aircraft when the next caption names one. The marker keeps moving as new positions arrive. The matcher understands common airline telephony names, codes such as `AA 166`, spoken flight numbers, and phonetic registrations such as “November one two three Alpha Bravo.” A number alone is matched only against the selected airport's current tower candidates; an ambiguous number leaves the map unchanged. A full callsign can also match a nearby aircraft just outside the shortlist. The caption gets a button to refocus that aircraft briefly. Matching depends on a feed reporting a current position and callsign for the plane.
 
-No npm dependencies are required. Map tiles and Leaflet load from the internet. The browser checks aircraft positions every 5 seconds. The backend shares one New York region query for all three airports: a 100 NM area from adsb.fi at most every 5 seconds and an OpenSky snapshot at most every 30 seconds. It merges aircraft by transponder ID and excludes positions older than 50 seconds. If one feed is unavailable, the other still supplies positions. This covers KCDW, KEWR, and KJFK; no feed can guarantee every aircraft is visible. adsb.fi requires attribution and permits personal, non-commercial use. OpenSky's anonymous API has a 10-second time resolution and 400 daily credits, so its supplemental feed may pause when the quota is exhausted.
+No npm dependencies are required. Map tiles and Leaflet load from the internet. The browser checks aircraft positions every 5 seconds. The backend uses regional aircraft queries: one New York metro query shared by KCDW/KEWR/KJFK, and a separate Los Angeles basin query for KLAX. Each region requests a 100 NM area from adsb.fi at most every 5 seconds and an OpenSky snapshot at most every 30 seconds. It merges aircraft by transponder ID and excludes positions older than 50 seconds. If one feed is unavailable, the other still supplies positions. No feed can guarantee every aircraft is visible. adsb.fi requires attribution and permits personal, non-commercial use. OpenSky's anonymous API has a 10-second time resolution and 400 daily credits, so its supplemental feed may pause when the quota is exhausted.
 
 ## Audio source
 
-The supplied LiveATC links are **player pages**, not raw media URLs. The backend uses their matching direct mounts at `https://d.liveatc.net/`. These were reachable during development, though source access may change. If access is denied, set an authorized direct stream URL in `.env` (`KCDW_ATIS_STREAM_URL`, `KCDW_RADIO_1_STREAM_URL`, `KCDW_RADIO_2_STREAM_URL`, `KEWR_TOWER_STREAM_URL`, or `KJFK_MAIN_TOWER_STREAM_URL`). The player shows an error if the source cannot be reached. LiveATC identifies the EWR mount as Tower #1 on 118.300 MHz and the JFK mount as a ground/tower feed; the interface displays the FAA tower frequencies 119.100 and 123.900 MHz for JFK.
+The supplied LiveATC links are **player pages**, not raw media URLs. The backend uses their matching direct mounts at `https://d.liveatc.net/`. These were reachable during development, though source access may change. If access is denied, set an authorized direct stream URL in `.env` (`KCDW_ATIS_STREAM_URL`, `KCDW_RADIO_1_STREAM_URL`, `KCDW_RADIO_2_STREAM_URL`, `KEWR_TOWER_STREAM_URL`, `KJFK_MAIN_TOWER_STREAM_URL`, `KLAX_FINAL_APP_STREAM_URL`, or `KLAX_DEP_WEST_APP_STREAM_URL`). The player shows an error if the source cannot be reached. LiveATC identifies the EWR mount as Tower #1 on 118.300 MHz, the JFK mount as a ground/tower feed (119.100 / 123.900 MHz), LAX Final App on 128.500 MHz, and LAX Dep/West App on 124.500 / 124.300 / 125.200 MHz.
 
 FFmpeg applies a voice bandpass (180–3500 Hz), compression, and limiting before creating 5-second PCM chunks. Each WAV is stored for the browser immediately; the same PCM is transcribed in parallel (up to two chunks at once) and a `caption` SSE event is emitted when text is ready. Captions are aligned at the chunk level; word-by-word timing is an animation because DeepSeek does not provide word timestamps. Recent audio chunks are held in server memory (about three minutes) and expire after the listening session ends. Caption wording can contain errors, so do not use it for aviation decisions. JFK's 119.100 and 123.900 MHz tabs use the same combined feed; they cannot isolate each frequency with the supplied source.
 
@@ -33,11 +33,11 @@ Check the source provider's terms and obtain any required permission before dist
 ## Endpoints
 
 - `GET /api/config` — airport and channel definitions
-- `GET /api/aircraft?icao=KCDW`, `?icao=KEWR`, or `?icao=KJFK` — merged nearby aircraft from both feeds
+- `GET /api/aircraft?icao=KCDW`, `?icao=KEWR`, `?icao=KJFK`, or `?icao=KLAX` — merged nearby aircraft from both feeds
 - `GET /api/radio/:channel` — live radio SSE (`segment` for audio, `caption` for text by sequence)
 - `GET /api/segments/:session/:sequence` — the exact WAV chunk for one event
 
-Channel IDs: `atis`, `radio-1`, `radio-2`, `ewr-tower`, `jfk-main-tower`.
+Channel IDs: `atis`, `radio-1`, `radio-2`, `ewr-tower`, `jfk-main-tower`, `lax-final-app`, `lax-dep-west-app`.
 
 ## Live radio events
 
